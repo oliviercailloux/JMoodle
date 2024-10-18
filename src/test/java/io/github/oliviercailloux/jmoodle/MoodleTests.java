@@ -16,6 +16,12 @@ public class MoodleTests {
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(MoodleTests.class);
 
+  private static record User (String name, int age) {
+  }
+
+  private static record Property (User user, String owner) {
+  }
+
   private static final URI MOODLE_PSL_TEST_SERVER =
       URI.create("https://moodle-test.psl.eu/webservice/rest/server.php");
 
@@ -36,11 +42,6 @@ public class MoodleTests {
     ImmutableMap<String, String> solved =
         Moodle.solve(ImmutableMap.of("p1", ImmutableList.of("v1", "v2")));
     assertEquals(ImmutableMap.of("p1[0]", "v1", "p1[1]", "v2"), solved);
-  }
-
-  private static record User (String name, int age) {
-  }
-  private static record Property (User user, String owner) {
   }
 
   @Test

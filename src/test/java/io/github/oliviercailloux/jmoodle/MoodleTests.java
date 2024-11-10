@@ -93,6 +93,7 @@ public class MoodleTests {
   @Test
   void testServer() throws Exception {
     Moodle moodle = Moodle.instance(MOODLE_PSL_TEST_SERVER);
+    // moodle.dump = true;
     ImmutableSet<JsonObject> pluginsSet = moodle.jsonPlugins();
     assertTrue(pluginsSet.size() >= 1);
 

@@ -51,22 +51,27 @@ public class Moodle {
 
   public static Moodle instance(URI moodleServer) {
     return new Moodle(moodleServer, CredentialsReader.keyReader().getCredentials().API_KEY(),
-        ClientBuilder.newClient(), Json.createReaderFactory(ImmutableMap.of()), true);
+        ClientBuilder.newClient(), Json.createReaderFactory(ImmutableMap.of()));
   }
+
+  public static Moodle instance(URI moodleServer, String apiKey, Client client,
+      JsonReaderFactory jsonReaderFactory) {
+    return new Moodle(moodleServer, apiKey, client, jsonReaderFactory);
+      }
 
   private final URI moodleServer;
   private final String apiKey;
   private final Client client;
   private final JsonReaderFactory jsonReaderFactory;
-  private final boolean dump;
+  boolean dump;
 
   private Moodle(URI moodleServer, String apiKey, Client client,
-      JsonReaderFactory jsonReaderFactory, boolean dump) {
+      JsonReaderFactory jsonReaderFactory) {
     this.moodleServer = moodleServer;
     this.apiKey = apiKey;
     this.client = client;
     this.jsonReaderFactory = jsonReaderFactory;
-    this.dump = dump;
+    this.dump = false;
   }
 
   private ImmutableSet<JsonObject> parse(String jsonAnswer) {

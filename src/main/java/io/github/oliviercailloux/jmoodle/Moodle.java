@@ -1,7 +1,10 @@
 package io.github.oliviercailloux.jmoodle;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -13,9 +16,11 @@ import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.jaris.xml.DomHelper;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
+import jakarta.json.JsonNumber;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import jakarta.json.JsonReaderFactory;
+import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
@@ -23,6 +28,7 @@ import jakarta.ws.rs.core.UriBuilder;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
@@ -66,6 +72,7 @@ public class Moodle {
   }
 
   private ImmutableSet<JsonObject> parse(String jsonAnswer) {
+    checkNotNull(jsonAnswer);
     LOGGER.debug("Json answer: {}.", jsonAnswer);
     if (dump) {
       try {
@@ -168,6 +175,8 @@ public class Moodle {
     }
 
     String answer = client.target(uriBuilder).request().get(String.class);
+    if (answer.equals("null"))
+      return null;
     return answer;
   }
 
@@ -228,7 +237,62 @@ public class Moodle {
     return ids;
   }
 
-  public ImmutableSet<JsonObject> grades(int assignmentId) {
+  /** https://stackoverflow.com/a/67127067/ */
+  private static <T extends Record> Constructor<T> canonicalConstructor(Class<T> recordClass) {
+    Class<?>[] componentTypes = Arrays.stream(recordClass.getRecordComponents())
+        .map(rc -> rc.getType()).toArray(Class<?>[]::new);
+    try {
+      return recordClass.getDeclaredConstructor(componentTypes);
+    } catch (NoSuchMethodException | SecurityException e) {
+      throw new VerifyException(e);
+    }
+  }
+
+  static <T extends Record> T asRecord(JsonObject json, Class<T> recordClass) {
+    final ImmutableList.Builder<Object> canonicalParamsBuilder = new ImmutableList.Builder<>();
+
+    RecordComponent[] recordComponents = recordClass.getRecordComponents();
+    for (RecordComponent recordComponent : recordComponents) {
+      String name = recordComponent.getName();
+      Class<?> type = recordComponent.getType();
+      checkState(json.containsKey(name), json);
+      JsonValue jsonValue = json.get(name);
+      Object wrapped;
+      if (jsonValue.equals(JsonValue.TRUE)) {
+        checkArgument(type == boolean.class);
+        wrapped = true;
+      } else if (jsonValue.equals(JsonValue.FALSE)) {
+        checkArgument(type == boolean.class);
+        wrapped = false;
+      } else if (jsonValue instanceof JsonString) {
+        checkArgument(type == String.class);
+        wrapped = ((JsonString) jsonValue).getString();
+      } else if (jsonValue instanceof JsonNumber) {
+        checkArgument(type == double.class || type == int.class, name);
+        if (type == int.class) {
+          wrapped = ((JsonNumber) jsonValue).intValue();
+        } else {
+          wrapped = ((JsonNumber) jsonValue).doubleValue();
+        }
+      } else {
+        throw new IllegalArgumentException("Unexpected JSON value: " + jsonValue);
+      }
+      canonicalParamsBuilder.add(wrapped);
+    }
+    ImmutableList<Object> canonicalParams = canonicalParamsBuilder.build();
+    Constructor<T> canonicalConstructor = canonicalConstructor(recordClass);
+    T newInstance;
+    try {
+      newInstance = canonicalConstructor.newInstance(canonicalParams.toArray());
+    } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+        | InvocationTargetException e) {
+      throw new VerifyException(e);
+    }
+    return newInstance;
+  }
+
+  public ImmutableMap<Integer, Double> grades(int assignmentId) {
+    // TODO mod_assign_get_submissions might be of interest to retrieve feedbacks.
     String jsonAnswer = send("mod_assign_get_grades",
         ImmutableMap.of("assignmentids[0]", String.valueOf(assignmentId)), "json");
     ImmutableSet<JsonObject> jsons = parse(jsonAnswer);
@@ -237,18 +301,18 @@ public class Moodle {
     checkState(assignment.containsKey("assignmentid"), assignment);
     checkState(assignment.getInt("assignmentid") == assignmentId);
     JsonArray gradesArray = assignment.getJsonArray("grades");
-    return gradesArray.stream().map(g -> (JsonObject) g).collect(ImmutableSet.toImmutableSet());
+    ImmutableSet<MoodleReadGrade> grades = gradesArray.stream().map(g -> (JsonObject) g)
+        .map(o -> asRecord(o, MoodleReadGrade.class)).collect(ImmutableSet.toImmutableSet());
+
+    return grades.stream().collect(ImmutableMap.toImmutableMap(MoodleReadGrade::userid,
+        MoodleReadGrade::gradeAsDouble));
   }
 
-  public void setGrades(int assignmentId, List<MoodleGrade> grades) {
-    // https://moodle-test.psl.eu/webservice/rest/server.php?wstoken=02db21541b8b81ab2436e56034afbac7&wsfunction=mod_assign_save_grades&assignmentid=9476&applytoall=0&grades[0][userid]=73&grades[0][grade]=12&grades[0][attemptnumber]=-1&grades[0][addattempt]=0&grades[0][workflowstate]=graded
-    // Fonctionne !
+  public void setGrades(int assignmentId, List<MoodleSendGrade> grades) {
     String jsonAnswer = send("mod_assign_save_grades",
         Map.of("assignmentid", String.valueOf(assignmentId), "applytoall", "0", "grades", grades),
         "json");
-    ImmutableSet<JsonObject> jsons = parse(jsonAnswer);
-    checkState(jsons.size() == 1);
-    JsonObject assignment = Iterables.getOnlyElement(jsons);
+    checkState(jsonAnswer == null, jsonAnswer);
   }
 
   private void processXmlWarnings(Element warningsEl) {

@@ -71,6 +71,13 @@ public class MoodleTests {
   }
 
   @Test
+  void testSend() throws Exception {
+    Moodle moodle = Moodle.instance(MOODLE_PSL_TEST_SERVER);
+    moodle.setGrades(9476, ImmutableList.of(MoodleSendGrade.overwriteLatestOrSet(73, 15d/3d)));
+    // moodle.setGrades(9476, ImmutableList.of(new MoodleSendGrade(73, 1.2d, 10, 1, "graded")));
+  }
+
+  @Test
   void testServer() throws Exception {
     Moodle moodle = Moodle.instance(MOODLE_PSL_TEST_SERVER);
     ImmutableSet<JsonObject> pluginsSet = moodle.jsonPlugins();
@@ -79,8 +86,10 @@ public class MoodleTests {
     int courseId = moodle.courseId("23_CIP_test_autograder");
     assertEquals(24705, courseId);
     ImmutableSet<Integer> assignmentIds = moodle.assignmentIds(courseId);
+    LOGGER.info("Assignments: {}", assignmentIds);
     assertTrue(assignmentIds.contains(9476));
-    ImmutableSet<JsonObject> grades = moodle.grades(9476);
+    ImmutableMap<Integer, Double> grades = moodle.grades(9476);
     assertTrue(grades.size() >= 1);
+    assertEquals(3.33333d, grades.get(73));
   }
 }

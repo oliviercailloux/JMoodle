@@ -336,11 +336,4 @@ public class Moodle {
         "json");
     checkState(jsonAnswer == null, jsonAnswer);
   }
-
-  private String keyName(Element element) {
-    checkState(element.getTagName().equals("KEY"));
-    String keyName = element.getAttribute("name");
-    checkState(!keyName.isEmpty());
-    return keyName;
-  }
 }

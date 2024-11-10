@@ -97,32 +97,6 @@ public class Moodle {
     return jsonElems;
   }
 
-  private String queryWithRecords(String wsFunction, Map<String, List<Object>> parameters,
-      String format) {
-    final ImmutableMap.Builder<String, String> allParams = new ImmutableMap.Builder<>();
-
-    for (Map.Entry<String, List<Object>> entry : parameters.entrySet()) {
-      String parameterName = entry.getKey();
-      List<Object> records = entry.getValue();
-      for (int i = 0; i < parameters.size(); i++) {
-        String prefix = parameterName + "[" + i + "]";
-        Object record = records.get(i);
-        Field[] declaredFields = record.getClass().getDeclaredFields();
-        for (Field field : declaredFields) {
-          String value;
-          try {
-            value = field.get(record).toString();
-          } catch (IllegalAccessException e) {
-            throw new IllegalArgumentException(e);
-          }
-          allParams.put(prefix + "[" + field.getName() + "]", value);
-        }
-      }
-    }
-
-    return send(wsFunction, allParams.build(), format);
-  }
-
   private static ImmutableMap<String, Object> prefixes(Object o) {
     if (o instanceof List<?> l) {
       return IntStream.range(0, l.size()).boxed()
@@ -187,18 +161,6 @@ public class Moodle {
     String answer = client.target(uriBuilder).request().get(String.class);
     if (answer.equals("null"))
       return null;
-    return answer;
-  }
-
-  private String queryOld(String wsFunction, Map<String, String> parameters, String format) {
-    UriBuilder uriBuilder = UriBuilder.fromUri(moodleServer);
-    uriBuilder.queryParam("moodlewsrestformat", format);
-    uriBuilder.queryParam("wstoken", apiKey);
-    uriBuilder.queryParam("wsfunction", wsFunction);
-    for (Map.Entry<String, String> entry : parameters.entrySet()) {
-      uriBuilder.queryParam(entry.getKey(), entry.getValue());
-    }
-    String answer = client.target(uriBuilder).request().get(String.class);
     return answer;
   }
 

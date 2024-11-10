@@ -57,7 +57,7 @@ public class Moodle {
   public static Moodle instance(URI moodleServer, String apiKey, Client client,
       JsonReaderFactory jsonReaderFactory) {
     return new Moodle(moodleServer, apiKey, client, jsonReaderFactory);
-      }
+  }
 
   private final URI moodleServer;
   private final String apiKey;
@@ -129,8 +129,8 @@ public class Moodle {
       String parameterName = entry.getKey();
       Object possiblyOptionalValue = entry.getValue();
       final Object value;
-      if(possiblyOptionalValue instanceof Optional<?> o) {
-        if(o.isPresent()) {
+      if (possiblyOptionalValue instanceof Optional<?> o) {
+        if (o.isPresent()) {
           value = o.get();
         } else {
           LOGGER.debug("Optional parameter {} is empty, not serializing it.", parameterName);
@@ -153,9 +153,10 @@ public class Moodle {
     return builder.build();
   }
 
-  private String send(String wsFunction, Map<String, ?> parameters, String format) {
+  /** Iff the answer is null, returns null. */
+  private ImmutableSet<JsonObject> send(String wsFunction, Map<String, ?> parameters) {
     UriBuilder uriBuilder = UriBuilder.fromUri(moodleServer);
-    uriBuilder.queryParam("moodlewsrestformat", format);
+    uriBuilder.queryParam("moodlewsrestformat", "json");
     uriBuilder.queryParam("wstoken", apiKey);
     uriBuilder.queryParam("wsfunction", wsFunction);
     ImmutableMap<String, String> solved = solve(parameters);
@@ -166,18 +167,13 @@ public class Moodle {
     String answer = client.target(uriBuilder).request().get(String.class);
     if (answer.equals("null"))
       return null;
-    return answer;
-  }
-
-  private ImmutableSet<JsonObject> jsonQuery(String wsFunction, Map<String, ?> parameters) {
-    String jsonAnswer = send(wsFunction, parameters, "json");
-    return parse(jsonAnswer);
+    return parse(answer);
   }
 
   public ImmutableSet<JsonObject> coursesByField(String field, String value) {
     String wsFunction = "core_course_get_courses_by_field";
     Map<String, String> parameters = Map.of("field", field, "value", value);
-    return jsonQuery(wsFunction, parameters);
+    return send(wsFunction, parameters);
   }
 
   public int courseId(String shortname) {
@@ -188,15 +184,12 @@ public class Moodle {
   }
 
   public ImmutableSet<JsonObject> jsonPlugins() {
-    String jsonAnswer =
-        send("tool_mobile_get_plugins_supporting_mobile", ImmutableMap.of(), "json");
-    return parse(jsonAnswer);
+    return send("tool_mobile_get_plugins_supporting_mobile", ImmutableMap.of());
   }
 
   public ImmutableSet<Integer> assignmentIds(int courseId) {
-    String jsonAnswer = send("mod_assign_get_assignments",
-        ImmutableMap.of("courseids", ImmutableList.of(String.valueOf(courseId))), "json");
-    ImmutableSet<JsonObject> jsons = parse(jsonAnswer);
+    ImmutableSet<JsonObject> jsons = send("mod_assign_get_assignments",
+        ImmutableMap.of("courseids", ImmutableList.of(String.valueOf(courseId))));
     checkState(jsons.size() == 1);
     JsonObject course = Iterables.getOnlyElement(jsons);
     checkState(course.containsKey("id"));
@@ -269,9 +262,8 @@ public class Moodle {
   }
 
   public ImmutableMap<Integer, Double> grades(int assignmentId) {
-    String jsonAnswer = send("mod_assign_get_grades",
-        ImmutableMap.of("assignmentids", ImmutableList.of(String.valueOf(assignmentId))), "json");
-    ImmutableSet<JsonObject> jsons = parse(jsonAnswer);
+    ImmutableSet<JsonObject> jsons = send("mod_assign_get_grades",
+        ImmutableMap.of("assignmentids", ImmutableList.of(String.valueOf(assignmentId))));
     checkState(jsons.size() == 1);
     JsonObject assignment = Iterables.getOnlyElement(jsons);
     checkState(assignment.containsKey("assignmentid"), assignment);
@@ -280,27 +272,25 @@ public class Moodle {
     ImmutableSet<MoodleReadGrade> grades = gradesArray.stream().map(g -> (JsonObject) g)
         .map(o -> asRecord(o, MoodleReadGrade.class)).collect(ImmutableSet.toImmutableSet());
 
-    return grades.stream().collect(ImmutableMap.toImmutableMap(MoodleReadGrade::userid,
-        MoodleReadGrade::gradeAsDouble));
+    return grades.stream().collect(
+        ImmutableMap.toImmutableMap(MoodleReadGrade::userid, MoodleReadGrade::gradeAsDouble));
   }
 
   public ImmutableMap<Integer, Integer> latestAttempts(int assignmentId) {
-    String jsonAnswer = send("mod_assign_get_submissions",
-        ImmutableMap.of("assignmentids", ImmutableList.of(String.valueOf(assignmentId))), "json");
-    ImmutableSet<JsonObject> jsons = parse(jsonAnswer);
+    ImmutableSet<JsonObject> jsons = send("mod_assign_get_submissions",
+        ImmutableMap.of("assignmentids", ImmutableList.of(String.valueOf(assignmentId))));
     checkState(jsons.size() == 1);
     JsonObject assignment = Iterables.getOnlyElement(jsons);
     checkState(assignment.containsKey("assignmentid"), assignment);
     checkState(assignment.getInt("assignmentid") == assignmentId);
     JsonArray submissionsArray = assignment.getJsonArray("submissions");
-    return submissionsArray.stream().map(g -> (JsonObject) g)
-        .collect(ImmutableMap.toImmutableMap(g -> g.getInt("userid"), g -> g.getInt("attemptnumber")));
+    return submissionsArray.stream().map(g -> (JsonObject) g).collect(
+        ImmutableMap.toImmutableMap(g -> g.getInt("userid"), g -> g.getInt("attemptnumber")));
   }
 
   public void setGrades(int assignmentId, List<MoodleSendGrade> grades) {
-    String jsonAnswer = send("mod_assign_save_grades",
-        Map.of("assignmentid", String.valueOf(assignmentId), "applytoall", "0", "grades", grades),
-        "json");
-    checkState(jsonAnswer == null, jsonAnswer);
+    ImmutableSet<JsonObject> jsons = send("mod_assign_save_grades",
+        Map.of("assignmentid", String.valueOf(assignmentId), "applytoall", "0", "grades", grades));
+    checkState(jsons == null, jsons);
   }
 }

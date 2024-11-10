@@ -337,18 +337,6 @@ public class Moodle {
     checkState(jsonAnswer == null, jsonAnswer);
   }
 
-  private void processXmlWarnings(Element warningsEl) {
-    checkState(keyName(warningsEl).equals("warnings"));
-    ImmutableList<Element> warningsChildren = DomHelper.toElements(warningsEl.getChildNodes());
-    checkState(warningsChildren.size() == 1);
-    Element warningsChild = warningsChildren.get(0);
-    checkState(warningsChild.getTagName().equals("MULTIPLE"));
-    String warningsText = warningsChild.getTextContent();
-    if (!warningsText.isEmpty()) {
-      LOGGER.warn(warningsText);
-    }
-  }
-
   private String keyName(Element element) {
     checkState(element.getTagName().equals("KEY"));
     String keyName = element.getAttribute("name");

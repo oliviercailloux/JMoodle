@@ -6,11 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.github.oliviercailloux.jaris.xml.DomHelper;
 import jakarta.json.JsonObject;
 import java.net.URI;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 public class MoodleTests {
   @SuppressWarnings("unused")
@@ -64,7 +68,7 @@ public class MoodleTests {
     ImmutableMap<String,
         String> solved = Moodle.solve(ImmutableMap.of("p1",
             ImmutableList.of(new Property(new User("her name", 60), "the owner"),
-                new Property(new User("her name 2", 61), "the owner 2"))));
+                new Property(new User("her name 2", 61), "the owner 2")), "notthere", Optional.empty()));
     assertEquals(ImmutableMap.of("p1[0][user][name]", "her name", "p1[0][user][age]", "60",
         "p1[0][owner]", "the owner", "p1[1][user][name]", "her name 2", "p1[1][user][age]", "61",
         "p1[1][owner]", "the owner 2"), solved);
@@ -73,8 +77,17 @@ public class MoodleTests {
   @Test
   void testSend() throws Exception {
     Moodle moodle = Moodle.instance(MOODLE_PSL_TEST_SERVER);
-    moodle.setGrades(9476, ImmutableList.of(MoodleSendGrade.overwriteLatestOrSet(73, 15d/3d)));
-    // moodle.setGrades(9476, ImmutableList.of(new MoodleSendGrade(73, 1.2d, 10, 1, "graded")));
+    DomHelper domHelper = DomHelper.domHelper();
+    Document html = domHelper.html();
+    Element body = html.createElement("body");
+    html.getDocumentElement().appendChild(body);
+    Element h1 = html.createElement("h1");
+    h1.setTextContent("Start");
+    body.appendChild(h1);
+    Element p = html.createElement("p");
+    p.setTextContent("Now this is feedback!");
+    body.appendChild(p);
+    moodle.setGrades(9476, ImmutableList.of(MoodleSendGrade.overwriteLatestOrSet(73, 10d/3d).withFeedback(MoodleAssignFeedback.html(domHelper.toString(html)))));
   }
 
   @Test
@@ -88,6 +101,9 @@ public class MoodleTests {
     ImmutableSet<Integer> assignmentIds = moodle.assignmentIds(courseId);
     LOGGER.info("Assignments: {}", assignmentIds);
     assertTrue(assignmentIds.contains(9476));
+    ImmutableMap<Integer, Integer> latestAttempts = moodle.latestAttempts(9476);
+    assertTrue(latestAttempts.size() >= 1);
+    assertEquals(14, latestAttempts.get(73));
     ImmutableMap<Integer, Double> grades = moodle.grades(9476);
     assertTrue(grades.size() >= 1);
     assertEquals(3.33333d, grades.get(73));

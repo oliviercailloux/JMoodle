@@ -9,10 +9,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import io.github.oliviercailloux.jaris.collections.CollectionUtils;
 import io.github.oliviercailloux.jaris.credentials.CredentialsReader;
-import io.github.oliviercailloux.jaris.exceptions.Unchecker;
-import io.github.oliviercailloux.jaris.throwing.TFunction;
 import io.github.oliviercailloux.jaris.xml.DomHelper;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -39,6 +36,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -85,7 +83,7 @@ public class Moodle {
     try (JsonReader jr = jsonReaderFactory.createReader(new StringReader(jsonAnswer))) {
       json = jr.readObject();
     }
-    checkState(json.containsKey("warnings"));
+    checkState(json.containsKey("warnings"), json);
     JsonArray warnings = json.getJsonArray("warnings");
     checkState(warnings.isEmpty(), warnings);
     Set<String> keys = new LinkedHashSet<>(json.keySet());
@@ -150,7 +148,19 @@ public class Moodle {
     ImmutableMap.Builder<String, String> builder = new ImmutableMap.Builder<>();
     for (Map.Entry<String, ?> entry : parameters.entrySet()) {
       String parameterName = entry.getKey();
-      Object value = entry.getValue();
+      Object possiblyOptionalValue = entry.getValue();
+      final Object value;
+      if(possiblyOptionalValue instanceof Optional<?> o) {
+        if(o.isPresent()) {
+          value = o.get();
+        } else {
+          LOGGER.debug("Optional parameter {} is empty, not serializing it.", parameterName);
+          continue;
+        }
+      } else {
+        value = possiblyOptionalValue;
+      }
+      checkArgument(!(value instanceof Optional<?>));
       if (value instanceof List<?> || value instanceof Record) {
         ImmutableMap<String, Object> prefixedParams = prefixes(value);
         ImmutableMap<String, String> solved = solve(prefixedParams);
@@ -218,7 +228,7 @@ public class Moodle {
 
   public ImmutableSet<Integer> assignmentIds(int courseId) {
     String jsonAnswer = send("mod_assign_get_assignments",
-        ImmutableMap.of("courseids[0]", String.valueOf(courseId)), "json");
+        ImmutableMap.of("courseids", ImmutableList.of(String.valueOf(courseId))), "json");
     ImmutableSet<JsonObject> jsons = parse(jsonAnswer);
     checkState(jsons.size() == 1);
     JsonObject course = Iterables.getOnlyElement(jsons);
@@ -292,9 +302,8 @@ public class Moodle {
   }
 
   public ImmutableMap<Integer, Double> grades(int assignmentId) {
-    // TODO mod_assign_get_submissions might be of interest to retrieve feedbacks.
     String jsonAnswer = send("mod_assign_get_grades",
-        ImmutableMap.of("assignmentids[0]", String.valueOf(assignmentId)), "json");
+        ImmutableMap.of("assignmentids", ImmutableList.of(String.valueOf(assignmentId))), "json");
     ImmutableSet<JsonObject> jsons = parse(jsonAnswer);
     checkState(jsons.size() == 1);
     JsonObject assignment = Iterables.getOnlyElement(jsons);
@@ -306,6 +315,19 @@ public class Moodle {
 
     return grades.stream().collect(ImmutableMap.toImmutableMap(MoodleReadGrade::userid,
         MoodleReadGrade::gradeAsDouble));
+  }
+
+  public ImmutableMap<Integer, Integer> latestAttempts(int assignmentId) {
+    String jsonAnswer = send("mod_assign_get_submissions",
+        ImmutableMap.of("assignmentids", ImmutableList.of(String.valueOf(assignmentId))), "json");
+    ImmutableSet<JsonObject> jsons = parse(jsonAnswer);
+    checkState(jsons.size() == 1);
+    JsonObject assignment = Iterables.getOnlyElement(jsons);
+    checkState(assignment.containsKey("assignmentid"), assignment);
+    checkState(assignment.getInt("assignmentid") == assignmentId);
+    JsonArray submissionsArray = assignment.getJsonArray("submissions");
+    return submissionsArray.stream().map(g -> (JsonObject) g)
+        .collect(ImmutableMap.toImmutableMap(g -> g.getInt("userid"), g -> g.getInt("attemptnumber")));
   }
 
   public void setGrades(int assignmentId, List<MoodleSendGrade> grades) {

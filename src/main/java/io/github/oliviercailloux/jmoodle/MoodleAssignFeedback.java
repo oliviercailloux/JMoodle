@@ -3,7 +3,7 @@ package io.github.oliviercailloux.jmoodle;
 import io.github.oliviercailloux.jaris.xml.DomHelper;
 import org.w3c.dom.Document;
 
-public record MoodleAssignFeedback(String text, int format) {
+public record MoodleAssignFeedback (String text, int format) {
   public static MoodleAssignFeedback html(String serialized) {
     return new MoodleAssignFeedback(serialized, 1);
   }

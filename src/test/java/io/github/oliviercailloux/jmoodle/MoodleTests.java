@@ -68,7 +68,8 @@ public class MoodleTests {
     ImmutableMap<String,
         String> solved = Moodle.solve(ImmutableMap.of("p1",
             ImmutableList.of(new Property(new User("her name", 60), "the owner"),
-                new Property(new User("her name 2", 61), "the owner 2")), "notthere", Optional.empty()));
+                new Property(new User("her name 2", 61), "the owner 2")),
+            "notthere", Optional.empty()));
     assertEquals(ImmutableMap.of("p1[0][user][name]", "her name", "p1[0][user][age]", "60",
         "p1[0][owner]", "the owner", "p1[1][user][name]", "her name 2", "p1[1][user][age]", "61",
         "p1[1][owner]", "the owner 2"), solved);
@@ -76,7 +77,7 @@ public class MoodleTests {
 
   @Test
   void testSend() throws Exception {
-    Moodle moodle = Moodle.instance(MOODLE_PSL_TEST_SERVER);
+    final Moodle moodle = Moodle.instance(MOODLE_PSL_TEST_SERVER);
     DomHelper domHelper = DomHelper.domHelper();
     Document html = domHelper.html();
     Element body = html.createElement("body");
@@ -87,7 +88,8 @@ public class MoodleTests {
     Element p = html.createElement("p");
     p.setTextContent("Now this is feedback!");
     body.appendChild(p);
-    moodle.setGrades(9476, ImmutableList.of(MoodleSendGrade.overwriteLatestOrSet(73, 10d/3d).withFeedback(MoodleAssignFeedback.html(domHelper.toString(html)))));
+    moodle.setGrades(9476, ImmutableList.of(MoodleSendGrade.overwriteLatestOrSet(73, 10d / 3d)
+        .withFeedback(MoodleAssignFeedback.html(domHelper.toString(html)))));
   }
 
   @Test

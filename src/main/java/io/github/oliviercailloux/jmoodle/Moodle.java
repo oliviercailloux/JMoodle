@@ -165,8 +165,9 @@ public class Moodle {
     }
 
     String answer = client.target(uriBuilder).request().get(String.class);
-    if (answer.equals("null"))
+    if (answer.equals("null")) {
       return null;
+    }
     return parse(answer);
   }
 

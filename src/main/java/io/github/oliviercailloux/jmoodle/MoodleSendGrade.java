@@ -7,7 +7,7 @@ public record MoodleSendGrade (int userid, double grade, int attemptnumber, int 
 
   /**
    * Will overwrite the attempt number if it exists, otherwise add a new attempt
-   * 
+   *
    * @param userid
    * @param grade
    * @param attemptnumber -1 for overwrite latest, otherwise, for a given number 0 ≤ x, the gui will

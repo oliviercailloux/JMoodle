@@ -23,7 +23,7 @@ import org.w3c.dom.Element;
 public class MoodTests {
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(MoodTests.class);
-  
+
   private static final URI MOODLE_PSL_TEST_SERVER =
       URI.create("https://moodle-test.psl.eu/webservice/rest/server.php");
 
@@ -69,9 +69,9 @@ public class MoodTests {
     ImmutableTable<UserId, Integer, Double> gradesByAttempt = mood.gradesByAttempt(9482);
     assertTrue(gradesByAttempt.size() >= 1);
     LOGGER.info("Grades by attempt: {}", gradesByAttempt);
-    Table<UserId, Integer, UserGradeFeedback> gradesByAssignment = mood.gradesByAssignment(courseId);
+    Table<UserId, Integer, UserGradeFeedback> gradesByAssignment =
+        mood.gradesByAssignment(courseId);
     assertTrue(gradesByAssignment.size() >= 1);
     LOGGER.info("Grades by assignment: {}", gradesByAssignment);
   }
-  
 }

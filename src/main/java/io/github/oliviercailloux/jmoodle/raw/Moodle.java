@@ -47,7 +47,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Systematic port of a few moodle APIs. The method and parameter names are kept, we Optional<?> for
- * optional parameters except when it’s a collection or a string, in which case emptiness corresponds to missing.
+ * optional parameters except when it’s a collection or a string, in which case emptiness
+ * corresponds to missing.
  */
 public class Moodle {
   @SuppressWarnings("unused")
@@ -186,11 +187,11 @@ public class Moodle {
   public JsonObject tool_mobile_get_plugins_supporting_mobile() {
     return send("tool_mobile_get_plugins_supporting_mobile", ImmutableMap.of());
   }
-  
+
   public JsonObject core_course_get_course_module(int cmid) {
     return send("core_course_get_course_module", ImmutableMap.of("cmid", cmid));
   }
-  
+
   public JsonObject core_course_get_courses_by_field(String field, String value) {
     ImmutableMap<String, String> parameters = ImmutableMap.of("field", field, "value", value);
     return send("core_course_get_courses_by_field", parameters);
@@ -204,21 +205,24 @@ public class Moodle {
     return send("core_course_get_courses", parameters);
   }
 
-  public JsonObject mod_assign_get_assignments(Set<Integer> courseids, Set<String> capabilities, Optional<Boolean> includenotenrolledcourses) {
-    ImmutableMap<String, ?> parameters =
-        ImmutableMap.of("courseids", courseids, "capabilities", capabilities, "includenotenrolledcourses", includenotenrolledcourses);
+  public JsonObject mod_assign_get_assignments(Set<Integer> courseids, Set<String> capabilities,
+      Optional<Boolean> includenotenrolledcourses) {
+    ImmutableMap<String, ?> parameters = ImmutableMap.of("courseids", courseids, "capabilities",
+        capabilities, "includenotenrolledcourses", includenotenrolledcourses);
     return send("mod_assign_get_assignments", parameters);
   }
 
-  public JsonObject core_grades_get_gradable_users(int courseid, Optional<Integer> groupid, Optional<Boolean> onlyactive) {
+  public JsonObject core_grades_get_gradable_users(int courseid, Optional<Integer> groupid,
+      Optional<Boolean> onlyactive) {
     ImmutableMap<String, ?> parameters =
         ImmutableMap.of("courseid", courseid, "groupid", groupid, "onlyactive", onlyactive);
     return send("core_grades_get_gradable_users", parameters);
   }
 
-  public JsonObject mod_assign_get_submissions(Set<Integer> assignmentids, String status, Optional<Instant> since, Optional<Instant> before) {
-    ImmutableMap<String, ?> parameters =
-        ImmutableMap.of("assignmentids", assignmentids, "status", status, "since", since, "before", before);
+  public JsonObject mod_assign_get_submissions(Set<Integer> assignmentids, String status,
+      Optional<Instant> since, Optional<Instant> before) {
+    ImmutableMap<String, ?> parameters = ImmutableMap.of("assignmentids", assignmentids, "status",
+        status, "since", since, "before", before);
     return send("mod_assign_get_submissions", parameters);
   }
 
@@ -235,8 +239,8 @@ public class Moodle {
     return send("mod_assign_get_grades", parameters);
   }
 
-  public void mod_assign_save_grade(int assignmentid, int userid, double grade,
-      int attemptnumber, boolean addattempt, String workflowstate, boolean applytoall,
+  public void mod_assign_save_grade(int assignmentid, int userid, double grade, int attemptnumber,
+      boolean addattempt, String workflowstate, boolean applytoall,
       Optional<GradePluginData> plugindata, Optional<AdvancedGradingData> advancedgradingdata) {
     ImmutableMap.Builder<String, Object> parametersBuilder = new ImmutableMap.Builder<>();
     parametersBuilder.put("assignmentid", assignmentid);
@@ -252,10 +256,10 @@ public class Moodle {
     JsonObject full = send("mod_assign_save_grade", parameters);
     checkState(full == null);
   }
-  
+
   public void mod_assign_save_grades(int assignmentid, boolean applytoall, Set<SaveGrade> grades) {
     ImmutableMap<String, ?> parameters =
-    ImmutableMap.of("assignmentid", assignmentid, "applytoall", applytoall, "grades", grades);
+        ImmutableMap.of("assignmentid", assignmentid, "applytoall", applytoall, "grades", grades);
     JsonObject full = send("mod_assign_save_grades", parameters);
     checkState(full == null);
   }

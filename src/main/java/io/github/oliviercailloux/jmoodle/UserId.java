@@ -1,5 +1,5 @@
 package io.github.oliviercailloux.jmoodle;
 
-public record UserId(int id) {
-  
+public record UserId (int id) {
+
 }

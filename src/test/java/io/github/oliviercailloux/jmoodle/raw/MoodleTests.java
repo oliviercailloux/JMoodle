@@ -37,15 +37,16 @@ public class MoodleTests {
 
   @Test
   void testVarious() throws Exception {
-    ImmutableMap<String, ?> parameters =
-        ImmutableMap.of("courseids", ImmutableSet.of(4010), "capabilities", ImmutableSet.of(), "includenotenrolledcourses", Optional.of(true));
+    ImmutableMap<String, ?> parameters = ImmutableMap.of("courseids", ImmutableSet.of(4010),
+        "capabilities", ImmutableSet.of(), "includenotenrolledcourses", Optional.of(true));
     ImmutableMap<String, String> solved = Moodle.solve(parameters);
     assertEquals(ImmutableMap.of("courseids[0]", "4010", "includenotenrolledcourses", "1"), solved);
   }
 
   @Test
   void testSomeMissing() throws Exception {
-    ImmutableMap<String, String> solved = Moodle.solve(ImmutableMap.of("p1", 1, "p2", Optional.empty()));
+    ImmutableMap<String, String> solved =
+        Moodle.solve(ImmutableMap.of("p1", 1, "p2", Optional.empty()));
     assertEquals(ImmutableMap.of("p1", "1"), solved);
   }
 

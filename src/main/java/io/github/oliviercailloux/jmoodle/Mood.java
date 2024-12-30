@@ -112,10 +112,11 @@ public class Mood {
     if (!ignoreWarnings) {
       checkState(warnings.isEmpty(), warnings);
     }
-    String otherKey = keys.stream().filter(k -> !k.equals("warnings")).collect(MoreCollectors.onlyElement());
+    String otherKey =
+        keys.stream().filter(k -> !k.equals("warnings")).collect(MoreCollectors.onlyElement());
     JsonArray jsonMainArray = full.getJsonArray(otherKey);
-    ImmutableSet<JsonObject> jsonElems = jsonMainArray.stream().map(v -> (JsonObject) v)
-        .collect(ImmutableSet.toImmutableSet());
+    ImmutableSet<JsonObject> jsonElems =
+        jsonMainArray.stream().map(v -> (JsonObject) v).collect(ImmutableSet.toImmutableSet());
     return jsonElems;
   }
 
@@ -143,12 +144,14 @@ public class Mood {
   }
 
   public ImmutableSet<JsonObject> gradableUsers(int courseId) {
-    JsonObject full = moodle.core_grades_get_gradable_users(courseId, Optional.empty(), Optional.empty());
+    JsonObject full =
+        moodle.core_grades_get_gradable_users(courseId, Optional.empty(), Optional.empty());
     return main(full);
   }
 
   public ImmutableSet<Integer> assignmentIds(int courseId) {
-    JsonObject full = moodle.mod_assign_get_assignments(ImmutableSet.of(courseId), ImmutableSet.of(), Optional.empty());
+    JsonObject full = moodle.mod_assign_get_assignments(ImmutableSet.of(courseId),
+        ImmutableSet.of(), Optional.empty());
     ImmutableSet<JsonObject> jsons = main(full);
     checkState(jsons.size() == 1);
     JsonObject course = Iterables.getOnlyElement(jsons);
@@ -168,21 +171,21 @@ public class Mood {
   }
 
   /**
-   * Giving up, it seems that the teacher has an attempt number zero
-   * automatically.
+   * Giving up, it seems that the teacher has an attempt number zero automatically.
    */
   ImmutableMap<UserId, Integer> latestAttempts(int assignmentId) {
-    JsonObject full = moodle.mod_assign_get_submissions(ImmutableSet.of(assignmentId), "", Optional.empty(),
-        Optional.empty());
+    JsonObject full = moodle.mod_assign_get_submissions(ImmutableSet.of(assignmentId), "",
+        Optional.empty(), Optional.empty());
     ImmutableSet<JsonObject> jsons = main(full);
     checkState(jsons.size() == 1);
     JsonObject assignment = Iterables.getOnlyElement(jsons);
     checkState(assignment.containsKey("assignmentid"), assignment);
     checkState(assignment.getInt("assignmentid") == assignmentId);
     JsonArray submissionsArray = assignment.getJsonArray("submissions");
-    ImmutableSetMultimap<UserId, Integer> allAttempts = submissionsArray.stream().map(g -> (JsonObject) g)
-        .collect(ImmutableSetMultimap.toImmutableSetMultimap(g -> new UserId(g.getInt("userid")),
-            g -> g.getInt("attemptnumber")));
+    ImmutableSetMultimap<UserId,
+        Integer> allAttempts = submissionsArray.stream().map(g -> (JsonObject) g).collect(
+            ImmutableSetMultimap.toImmutableSetMultimap(g -> new UserId(g.getInt("userid")),
+                g -> g.getInt("attemptnumber")));
     ImmutableMap.Builder<UserId, Integer> latestAttempts = ImmutableMap.builder();
     for (UserId userId : allAttempts.keySet()) {
       ImmutableSet<Integer> herAttempts = allAttempts.get(userId);
@@ -196,9 +199,11 @@ public class Mood {
   }
 
   public Table<UserId, Integer, UserGradeFeedback> gradesByAssignment(int courseId) {
-    JsonObject full = moodle.gradereport_user_get_grade_items(courseId, Optional.empty(), Optional.empty());
+    JsonObject full =
+        moodle.gradereport_user_get_grade_items(courseId, Optional.empty(), Optional.empty());
     ImmutableSet<JsonObject> userGrades = main(full);
-    ImmutableTable.Builder<UserId, Integer, UserGradeFeedback> gradesBuilder = ImmutableTable.builder();
+    ImmutableTable.Builder<UserId, Integer, UserGradeFeedback> gradesBuilder =
+        ImmutableTable.builder();
     for (JsonObject userGrade : userGrades) {
       int userId = userGrade.getJsonNumber("userid").intValueExact();
       String userFullName = userGrade.getString("userfullname");
@@ -208,17 +213,19 @@ public class Mood {
         String itemType = gradeItem.getString("itemtype");
         JsonValue itemModule = gradeItem.get("itemmodule");
         JsonValue gradeRaw = gradeItem.get("graderaw");
-        if (!itemType.equals("mod") || itemModule.equals(JsonValue.NULL) || !((JsonString)itemModule).getString().equals("assign") || gradeRaw.equals(JsonValue.NULL)) {
+        if (!itemType.equals("mod") || itemModule.equals(JsonValue.NULL)
+            || !((JsonString) itemModule).getString().equals("assign")
+            || gradeRaw.equals(JsonValue.NULL)) {
           continue;
         }
         int assignmentId = gradeItem.getInt("iteminstance");
         String assignmentName = gradeItem.getString("itemname");
-        double grade = ((JsonNumber)gradeRaw).doubleValue();
+        double grade = ((JsonNumber) gradeRaw).doubleValue();
         String feedbackStr = gradeItem.getString("feedback");
         int feedbackformat = gradeItem.getJsonNumber("feedbackformat").intValueExact();
         Feedback feedback = new Feedback(feedbackStr, Format.fromValue(feedbackformat));
-        UserGradeFeedback userGradeFeedback = new UserGradeFeedback(new UserId(userId), userFullName, assignmentId,
-            assignmentName, grade, feedback);
+        UserGradeFeedback userGradeFeedback = new UserGradeFeedback(new UserId(userId),
+            userFullName, assignmentId, assignmentName, grade, feedback);
         gradesBuilder.put(new UserId(userId), assignmentId, userGradeFeedback);
       }
     }

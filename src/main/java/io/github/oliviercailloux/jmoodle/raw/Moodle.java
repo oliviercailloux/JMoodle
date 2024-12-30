@@ -46,9 +46,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Systematic port of a few moodle APIs. The method and parameter names are kept, we Optional<?> for
- * optional parameters except when it’s a collection or a string, in which case emptiness
- * corresponds to missing.
+ * Systematic port of a few moodle APIs. The method and parameter names are kept, we use
+ * <code>Optional&lt;?></code> for optional parameters except when it’s a collection or a string, in
+ * which case emptiness corresponds to missing.
  */
 public class Moodle {
   @SuppressWarnings("unused")
